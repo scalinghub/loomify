@@ -60,11 +60,15 @@ export interface ApiKeys {
 
 // Job types for batch processing
 export type JobStatus = 'queued' | 'downloading' | 'transcribing' | 'generating' | 'completed' | 'failed';
+export type JobMode = 'individual' | 'merge-parent' | 'merge-child';
 
 export interface Job {
   id: string;
   url: string;
   keys: ApiKeys;
+  mode: JobMode;
+  parentJobId?: string;     // merge-child: reference to parent
+  childJobIds?: string[];   // merge-parent: all child job IDs
   status: JobStatus;
   progress: number; // 0-100
   message: string;

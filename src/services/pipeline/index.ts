@@ -108,4 +108,41 @@ export async function processLoomVideo(
   }
 }
 
+// Download + Transcribe only (no Gamma) - used for merge mode
+export async function downloadAndTranscribe(
+  loomUrl: string,
+  keys: ApiKeys,
+  onStatus?: StatusCallback
+): Promise<{ success: boolean; transcript?: string; error?: string }> {
+  const updateStatus = (status: ProcessingStatus) => {
+    if (onStatus) onStatus(status);
+  };
+
+  let downloadResult;
+
+  try {
+    updateStatus({ stage: 'download', progress: 0, message: 'Starte Video-Download von Loom...' });
+    downloadResult = await downloadLoomVideo(loomUrl);
+    updateStatus({ stage: 'download', progress: 100, message: 'Video erfolgreich heruntergeladen' });
+
+    updateStatus({ stage: 'transcribe', progress: 0, message: 'Lade Video zu Gemini hoch...' });
+    updateStatus({ stage: 'transcribe', progress: 30, message: 'Video wird von Gemini verarbeitet...' });
+    const transcriptionResult = await transcribeVideo(downloadResult.filePath, keys.geminiKey);
+    updateStatus({ stage: 'transcribe', progress: 100, message: 'Transkription abgeschlossen' });
+
+    await downloadResult.cleanup();
+
+    return { success: true, transcript: transcriptionResult.transcript };
+  } catch (error) {
+    if (downloadResult) {
+      try { await downloadResult.cleanup(); } catch { /* ignore */ }
+    }
+
+    return {
+      success: false,
+      error: error instanceof ProcessingError ? error.message : (error instanceof Error ? error.message : 'Ein unbekannter Fehler ist aufgetreten'),
+    };
+  }
+}
+
 export { ProcessingError, type ProcessingResult, type ProcessingStatus } from './types';

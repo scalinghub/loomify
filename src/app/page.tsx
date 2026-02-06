@@ -5,6 +5,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 interface JobData {
   id: string;
   url: string;
+  mode: string;
+  parentJobId?: string;
+  childJobIds?: string[];
   status: string;
   progress: number;
   message: string;
@@ -68,8 +71,96 @@ function getApiHeaders(settings: Settings): Record<string, string> {
   return headers;
 }
 
+function JobCard({ job, isChild }: { job: JobData; isChild?: boolean }) {
+  const colors = STATUS_COLORS[job.status] || STATUS_COLORS.queued;
+  const label = STATUS_LABELS[job.status] || job.status;
+  const isActive = !['completed', 'failed', 'queued'].includes(job.status);
+  const isMergeParent = job.mode === 'merge-parent';
+  const isMergeChild = job.mode === 'merge-child';
+
+  return (
+    <div
+      style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: isChild ? 8 : 12,
+        padding: isChild ? 12 : 16,
+        marginLeft: isChild ? 24 : 0,
+        borderLeft: isChild ? `3px solid ${colors.border}` : undefined,
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: isChild ? 13 : 14, fontWeight: 500, color: '#334155' }}>
+          {isMergeParent ? job.url : `...${extractVideoId(job.url)}`}
+        </span>
+        <span style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: colors.text,
+          background: `${colors.text}15`,
+          padding: '2px 10px',
+          borderRadius: 20,
+        }}>
+          {isMergeChild && job.status === 'completed' ? 'Transkribiert' : label}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      {isActive && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ width: '100%', height: isChild ? 4 : 6, background: '#e2e8f0', borderRadius: 3 }}>
+            <div style={{
+              height: isChild ? 4 : 6,
+              background: '#2563eb',
+              borderRadius: 3,
+              transition: 'width 0.5s',
+              width: `${job.progress}%`,
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Message */}
+      <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+        {job.message}
+      </p>
+
+      {/* Result link - only for individual and merge-parent */}
+      {job.status === 'completed' && job.result?.presentationUrl && !isMergeChild && (
+        <a
+          href={job.result.presentationUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-block',
+            marginTop: 8,
+            padding: '6px 16px',
+            background: '#16a34a',
+            color: 'white',
+            fontWeight: 500,
+            fontSize: 13,
+            borderRadius: 8,
+            textDecoration: 'none',
+          }}
+        >
+          Präsentation öffnen
+        </a>
+      )}
+
+      {/* Error */}
+      {job.status === 'failed' && job.error && (
+        <p style={{ fontSize: 13, color: '#dc2626', marginTop: 4, marginBottom: 0 }}>
+          {job.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [urls, setUrls] = useState('');
+  const [mergeMode, setMergeMode] = useState(false);
   const [jobs, setJobs] = useState<JobData[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -139,11 +230,17 @@ export default function Home() {
       return;
     }
 
+    if (mergeMode && urlList.length < 2) {
+      setSubmitError('Zum Zusammenführen mindestens 2 URLs eingeben');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: getApiHeaders(settings),
-        body: JSON.stringify({ urls: urlList }),
+        body: JSON.stringify({ urls: urlList, merge: mergeMode }),
       });
 
       const data = await res.json();
@@ -175,6 +272,20 @@ export default function Home() {
     fontFamily: 'inherit',
     boxSizing: 'border-box' as const,
   };
+
+  // Group jobs: merge-parents with their children, individual jobs standalone
+  const parentJobs = jobs.filter((j) => j.mode !== 'merge-child');
+  const childJobMap = new Map<string, JobData[]>();
+  jobs.filter((j) => j.mode === 'merge-child').forEach((child) => {
+    if (child.parentJobId) {
+      const existing = childJobMap.get(child.parentJobId) || [];
+      existing.push(child);
+      childJobMap.set(child.parentJobId, existing);
+    }
+  });
+
+  const completedCount = jobs.filter((j) => j.status === 'completed' && j.mode !== 'merge-child').length;
+  const totalVisible = parentJobs.length;
 
   return (
     <div style={{ minHeight: '100vh', padding: '48px 16px', maxWidth: 720, margin: '0 auto' }}>
@@ -350,7 +461,59 @@ export default function Home() {
               opacity: submitting || !keysConfigured ? 0.5 : 1,
             }}
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+
+          {/* Mode Toggle */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 12,
+            marginBottom: 12,
+          }}>
+            <div
+              onClick={() => setMergeMode(!mergeMode)}
+              style={{
+                display: 'flex',
+                background: '#f1f5f9',
+                borderRadius: 8,
+                padding: 3,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              <span style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 500,
+                background: !mergeMode ? 'white' : 'transparent',
+                color: !mergeMode ? '#0f172a' : '#64748b',
+                boxShadow: !mergeMode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s',
+              }}>
+                Einzelne Präsentationen
+              </span>
+              <span style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                fontSize: 13,
+                fontWeight: 500,
+                background: mergeMode ? 'white' : 'transparent',
+                color: mergeMode ? '#0f172a' : '#64748b',
+                boxShadow: mergeMode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s',
+              }}>
+                Eine Präsentation
+              </span>
+            </div>
+            {mergeMode && (
+              <span style={{ fontSize: 12, color: '#64748b' }}>
+                Alle Transkripte werden zusammengeführt
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: '#94a3b8' }}>
               {!keysConfigured ? 'Bitte zuerst API-Keys eingeben' : 'Max. 10 URLs gleichzeitig'}
             </span>
@@ -379,92 +542,26 @@ export default function Home() {
       </form>
 
       {/* Jobs List */}
-      {jobs.length > 0 && (
+      {parentJobs.length > 0 && (
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#334155' }}>
-            Jobs ({jobs.filter((j) => j.status === 'completed').length}/{jobs.length} fertig)
+            Jobs ({completedCount}/{totalVisible} fertig)
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {jobs.map((job) => {
-              const colors = STATUS_COLORS[job.status] || STATUS_COLORS.queued;
-              const label = STATUS_LABELS[job.status] || job.status;
-              const isActive = !['completed', 'failed', 'queued'].includes(job.status);
+            {parentJobs.map((job) => {
+              const children = childJobMap.get(job.id) || [];
 
               return (
-                <div
-                  key={job.id}
-                  style={{
-                    background: colors.bg,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: 12,
-                    padding: 16,
-                  }}
-                >
-                  {/* Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: '#334155' }}>
-                      ...{extractVideoId(job.url)}
-                    </span>
-                    <span style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: colors.text,
-                      background: `${colors.text}15`,
-                      padding: '2px 10px',
-                      borderRadius: 20,
-                    }}>
-                      {label}
-                    </span>
-                  </div>
-
-                  {/* Progress bar */}
-                  {isActive && (
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ width: '100%', height: 6, background: '#e2e8f0', borderRadius: 3 }}>
-                        <div style={{
-                          height: 6,
-                          background: '#2563eb',
-                          borderRadius: 3,
-                          transition: 'width 0.5s',
-                          width: `${job.progress}%`,
-                        }} />
-                      </div>
+                <div key={job.id}>
+                  <JobCard job={job} />
+                  {/* Render children for merge-parent */}
+                  {children.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                      {children.map((child) => (
+                        <JobCard key={child.id} job={child} isChild />
+                      ))}
                     </div>
-                  )}
-
-                  {/* Message */}
-                  <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
-                    {job.message}
-                  </p>
-
-                  {/* Result link */}
-                  {job.status === 'completed' && job.result?.presentationUrl && (
-                    <a
-                      href={job.result.presentationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-block',
-                        marginTop: 8,
-                        padding: '6px 16px',
-                        background: '#16a34a',
-                        color: 'white',
-                        fontWeight: 500,
-                        fontSize: 13,
-                        borderRadius: 8,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Präsentation öffnen
-                    </a>
-                  )}
-
-                  {/* Error */}
-                  {job.status === 'failed' && job.error && (
-                    <p style={{ fontSize: 13, color: '#dc2626', marginTop: 4, marginBottom: 0 }}>
-                      {job.error}
-                    </p>
                   )}
                 </div>
               );
