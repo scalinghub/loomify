@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Loomify
 
-## Getting Started
+Internes Tool, das Loom-Videos automatisch transkribiert und daraus Präsentationen erstellt.
 
-First, run the development server:
+**Loom URL → Video Download → Gemini Transkription → Gamma Präsentation**
+
+## Voraussetzungen
+
+- **macOS** mit [Homebrew](https://brew.sh)
+- **Node.js** 20+ (`brew install node`)
+- **Gamma Account** mit API-Zugang (Pro, Ultra, Team oder Business)
+- **Google Gemini API Key** aus [Google AI Studio](https://aistudio.google.com/apikey)
+
+## Installation
+
+```bash
+git clone https://github.com/scalinghub/loomify.git
+cd loomify
+chmod +x setup.sh
+./setup.sh
+```
+
+Das Setup-Script prüft/installiert automatisch Node.js, npm und yt-dlp.
+
+## Starten
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Dann im Browser öffnen: **http://localhost:3002**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Einrichtung
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Beim ersten Start in der App unter **Einstellungen** die API-Keys eingeben:
 
-## Learn More
+| Key | Wo bekomme ich den? |
+|-----|---------------------|
+| **Gemini API Key** | [Google AI Studio](https://aistudio.google.com/apikey) |
+| **Gamma API Key** | Gamma App → Settings → API |
+| **Gamma Template ID** | (Optional) Eigene Vorlage aus Gamma |
 
-To learn more about Next.js, take a look at the following resources:
+Die Keys werden lokal im Browser gespeichert und bleiben über Sessions erhalten.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Batch-Verarbeitung** — Bis zu 10 Loom-URLs gleichzeitig
+- **Merge-Modus** — Mehrere Videos zu einer Präsentation zusammenführen
+- **Folienanzahl** — Anzahl der Folien pro Präsentation wählbar (3-30)
+- **Parallele Verarbeitung** — Max. 2 Videos werden gleichzeitig verarbeitet
