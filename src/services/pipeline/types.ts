@@ -56,6 +56,7 @@ export interface ApiKeys {
   geminiKey: string;
   gammaKey: string;
   gammaTemplateId?: string;
+  numCards?: number;
 }
 
 // Job types for batch processing

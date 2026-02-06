@@ -21,18 +21,18 @@ interface GammaGenerationRequest {
   };
 }
 
-export async function createPresentation(transcript: string, gammaKey: string, gammaTemplateId?: string): Promise<PresentationResult> {
-  return generatePresentation(transcript, gammaKey, gammaTemplateId);
+export async function createPresentation(transcript: string, gammaKey: string, gammaTemplateId?: string, numCards?: number): Promise<PresentationResult> {
+  return generatePresentation(transcript, gammaKey, gammaTemplateId, numCards);
 }
 
-async function generatePresentation(transcript: string, gammaKey: string, gammaTemplateId?: string): Promise<PresentationResult> {
+async function generatePresentation(transcript: string, gammaKey: string, gammaTemplateId?: string, numCards?: number): Promise<PresentationResult> {
   const client = getGammaClient(gammaKey);
 
   const requestBody: GammaGenerationRequest = {
     inputText: transcript,
     textMode: 'generate',
     format: 'presentation',
-    numCards: 10,
+    numCards: numCards || 10,
     textOptions: {
       amount: 'medium',
       tone: 'professional',

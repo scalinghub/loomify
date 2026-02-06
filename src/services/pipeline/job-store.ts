@@ -241,7 +241,8 @@ class JobStore {
       const presentationResult = await createPresentation(
         combinedTranscript,
         parent.keys.gammaKey,
-        parent.keys.gammaTemplateId
+        parent.keys.gammaTemplateId,
+        parent.keys.numCards
       );
 
       parent.status = 'completed';

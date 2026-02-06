@@ -71,7 +71,7 @@ export async function processLoomVideo(
       message: 'Gamma generiert Präsentation...',
     });
 
-    const presentationResult = await createPresentation(transcriptionResult.transcript, keys.gammaKey, keys.gammaTemplateId);
+    const presentationResult = await createPresentation(transcriptionResult.transcript, keys.gammaKey, keys.gammaTemplateId, keys.numCards);
 
     updateStatus({
       stage: 'generate',

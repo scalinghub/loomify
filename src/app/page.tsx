@@ -161,6 +161,7 @@ function JobCard({ job, isChild }: { job: JobData; isChild?: boolean }) {
 export default function Home() {
   const [urls, setUrls] = useState('');
   const [mergeMode, setMergeMode] = useState(false);
+  const [numCards, setNumCards] = useState(10);
   const [jobs, setJobs] = useState<JobData[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -240,7 +241,7 @@ export default function Home() {
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: getApiHeaders(settings),
-        body: JSON.stringify({ urls: urlList, merge: mergeMode }),
+        body: JSON.stringify({ urls: urlList, merge: mergeMode, numCards }),
       });
 
       const data = await res.json();
@@ -462,13 +463,14 @@ export default function Home() {
             }}
           />
 
-          {/* Mode Toggle */}
+          {/* Options Row */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 16,
             marginTop: 12,
             marginBottom: 12,
+            flexWrap: 'wrap',
           }}>
             <div
               onClick={() => setMergeMode(!mergeMode)}
@@ -511,6 +513,29 @@ export default function Home() {
                 Alle Transkripte werden zusammengeführt
               </span>
             )}
+
+            {/* Slide Count */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: '#475569' }}>Folien:</label>
+              <input
+                type="number"
+                min={3}
+                max={30}
+                value={numCards}
+                onChange={(e) => setNumCards(Math.max(3, Math.min(30, parseInt(e.target.value) || 10)))}
+                style={{
+                  width: 56,
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  fontSize: 14,
+                  textAlign: 'center',
+                  color: '#0f172a',
+                  outline: 'none',
+                }}
+              />
+            </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

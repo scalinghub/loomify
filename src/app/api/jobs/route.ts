@@ -7,6 +7,7 @@ import { ApiKeys } from '@/services/pipeline/types';
 const batchSchema = z.object({
   urls: z.array(z.string().url()).min(1, 'Mindestens eine URL erforderlich').max(10, 'Maximal 10 URLs gleichzeitig'),
   merge: z.boolean().optional().default(false),
+  numCards: z.number().min(3).max(30).optional().default(10),
 });
 
 function extractKeys(request: NextRequest): ApiKeys | null {
@@ -60,9 +61,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Submit valid URLs to job store
+    const keysWithOptions = { ...keys, numCards: parsed.data.numCards };
     const jobs = parsed.data.merge
-      ? jobStore.submitMerge(validUrls, keys)
-      : jobStore.submit(validUrls, keys);
+      ? jobStore.submitMerge(validUrls, keysWithOptions)
+      : jobStore.submit(validUrls, keysWithOptions);
 
     return NextResponse.json({
       jobs: jobs.map((j) => ({ id: j.id, url: j.url, status: j.status, mode: j.mode })),
