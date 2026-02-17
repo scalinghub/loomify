@@ -82,11 +82,13 @@ function JobCard({ job, isChild }: { job: JobData; isChild?: boolean }) {
     <div
       style={{
         background: colors.bg,
-        border: `1px solid ${colors.border}`,
+        borderTop: `1px solid ${colors.border}`,
+        borderRight: `1px solid ${colors.border}`,
+        borderBottom: `1px solid ${colors.border}`,
+        borderLeft: isChild ? `3px solid ${colors.border}` : `1px solid ${colors.border}`,
         borderRadius: isChild ? 8 : 12,
         padding: isChild ? 12 : 16,
         marginLeft: isChild ? 24 : 0,
-        borderLeft: isChild ? `3px solid ${colors.border}` : undefined,
       }}
     >
       {/* Header */}
